@@ -1,22 +1,57 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
 #include <mkl.h>
 #include <mkl_dfti.h>
 
 #define PI 3.141592653589793
 
-int main() {
-    /* Physical constants */
-    const double omega  = 5.639e14 * 2 * PI;   /* Carrier angular frequency */
-    const double omegaM = 4.5e11  * 2 * PI;    /* Modulation angular frequency */
-    const double x0 = 1e-3;                    /* Base path length (m) */
-    const double xm = 5e-12;                    /* Modulation amplitude (m) */
-    const double c  = 3e8;                     /* Speed of light (m/s) */
+/* Function to read parameters from a file */
+int read_params(const char *filename, double *omega, double *omegaM, double *x0, double *xm, double *c, double *dt, long long *n) {
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        perror("Error opening parameter file");
+        return 1;
+    }
 
-    /* Sampling parameters */
-    const double dt = 1e-17;                   /* Time step (s) */
-    const long long n = 4194304LL * 1024;        /* Total samples */
+    char line[256];
+    while (fgets(line, sizeof(line), file)) {
+        char key[64];
+        double value;
+        if (sscanf(line, "%63[^=]=%lf", key, &value) == 2) {
+            if (strcmp(key, "omega") == 0) *omega = value * 2 * PI;
+            else if (strcmp(key, "omegaM") == 0) *omegaM = value * 2 * PI;
+            else if (strcmp(key, "x0") == 0) *x0 = value;
+            else if (strcmp(key, "xm") == 0) *xm = value;
+            else if (strcmp(key, "c") == 0) *c = value;
+            else if (strcmp(key, "dt") == 0) *dt = value;
+            else if (strcmp(key, "n") == 0) *n = (long long)value;
+        }
+    }
+
+    fclose(file);
+    return 0;
+}
+
+int main() {
+    /* Parameters */
+    double omega, omegaM, x0, xm, c, dt;
+    long long n;
+
+    /* Read parameters from file */
+    if (read_params("params", &omega, &omegaM, &x0, &xm, &c, &dt, &n)) {
+        return 1;
+    }
+
+    printf("Parameters loaded:\n");
+    printf("omega = %.3e rad/s\n", omega);
+    printf("omegaM = %.3e rad/s\n", omegaM);
+    printf("x0 = %.3e m\n", x0);
+    printf("xm = %.3e m\n", xm);
+    printf("c = %.3e m/s\n", c);
+    printf("dt = %.3e s\n", dt);
+    printf("n = %lld samples\n", n);
 
     printf("Allocating %lld samples...\n", n);
 
